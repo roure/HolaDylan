@@ -1,7 +1,4 @@
-# Extending Lot Selection Strategies in HexaStock
-**Domain-Driven Design + Hexagonal (Clean) Architecture**
-
----
+# Extending HexaStock. Hexagonal (Clean) Architecture**
 
 ## Table of Contents
 
@@ -34,13 +31,30 @@
         - [Understanding and Ownership (Critical)](#understanding-and-ownership-critical)
 
 ---
-
-## 1. What to implement: Business Context
+## 1. Business Context
 The **HexaStock** platform began as a financial portfolio management application focused on stock trading in Spain.  
 It allows users to create portfolios, buy and sell stocks, and track their investments over time. Luckily, the system is very successful
 among its users, and we are looking to expand its reach. Concretely, we want to implement the three following new features:
+1. Introduce a new stock price provider
+2. Implement new stock selection policies when we sell them. This is required to extend our system to other foreign markets.
+3. Add the ability to track different stock prices and have an alert
 
-### 1.1 Add a Third Stock Price Provider Adapter 
+## 2. Objective of the Assignment
+The goal of this assignment is to **evolve the existing system** to learn the structure of the Hexagonal architecture and to experiment with how ports and adapters make the policy independent of the infrastructure. We 
+will also see that this is done at the cost of having more code and a more complex structure.
+- The first exercice consist on implement a new output adapter. We add a new single file to the application and do not need to modify any of the other files.
+- In the second exercise, we are extending an already existing use case. We will change the domain classes and may need to modify some input ports and adapters.
+- In the third exercise, we are implementing a brand new use case. So, you will need to add new input and output ports, their adapters, and also add mappings between the models in the different layers
+
+So, you will learn:
+- **Domain-Driven Design (DDD)** principles
+- **Hexagonal (Clean) Architecture**
+- strong encapsulation of business rules within the **domain**
+- minimal and controlled impact on infrastructure
+
+This assignment is not about rewriting the system, but about **evolving it correctly**.
+
+## Exercise 1. Add a Third Stock Price Provider Adapter 
 
 HexaStock already has **two** implementations of the same outbound port (`StockPriceProviderPort`), each calling a different external provider:
 
@@ -59,7 +73,7 @@ Your task is to add a **third adapter**, using a different provider, with the sa
 
 …and demonstrate that the **core of the system (domain + application services + REST controllers)** remains unchanged.
 
-#### Provider Options (examples)
+### Provider Options (examples)
 
 Pick **one** provider that offers a free tier or freemium plan. You may choose any provider you find online, but here are common options:
 * **https://site.financialmodelingprep.com/**
@@ -75,7 +89,7 @@ You can also pick another provider not listed here, as long as:
 * it authenticates via API key,
 * it returns data you can map to your domain `StockPrice` model.
 
-#### Implementation Notes
+### Implementation Notes
 **Strict rule:**
 * ✅ You may add new classes in the adapter layer
 * ❌ You must NOT change the port interface
@@ -85,7 +99,7 @@ You can also pick another provider not listed here, as long as:
 
 This is the point of the exercise: **only infrastructure changes**.
 
-### 1.2 Lot Selection Strategies
+## Exercise 2. Lot Selection Strategies
 
 The **HexaStock** platform was originally designed for the Spanish market.  
 In this context, tax regulations require the use of the **FIFO (First-In, First-Out)** criterion when selling stocks. For this reason, the system was initially implemented with FIFO as its default and only lot selection strategy.
@@ -104,54 +118,43 @@ As part of the company’s growth strategy, the product is now expected to **exp
 This creates a clear business opportunity:  
 **to extend HexaStock so it supports additional lot selection strategies beyond FIFO**, while preserving architectural quality and minimizing maintenance costs.
 
-#### 1.2.1 Lot Selection Policy (Key Domain Decision)
+### Lot Selection Policy (Key Domain Decision)
 
-Each **Portfolio** has an associated **Lot Selection Policy** (`LotSelectionPolicy`) that determines how lots are consumed when selling stocks.
-
-### Mandatory Business Rules
+Each **Portfolio** has an associated **Lot Selection Policy** (`LotSelectionPolicy`) that determines how lots are consumed when selling stocks. The following business rules must be fulfilled:
 
 1. The policy is defined **when the portfolio is created**.
 2. The policy is persisted as part of the aggregate state.
 3. **The policy cannot be changed after creation.**
-4. All sell operations automatically apply the configured policy.
+4. All sales operations automatically apply the configured policy.
 5. FIFO remains available as the default policy and **must not be removed or broken**.
 
-#### 1.2.2. Strategies to Implement
+### Strategies to Implement
 
-##### Mandatory New Strategies
+#### Mandatory New Strategies
 
 Students must implement **two new strategies**, in addition to the existing FIFO strategy.
 
-###### LIFO — Last In, First Out
-
-- The most recently acquired shares are sold first.
-- Clearly illustrates behavioral differences compared to FIFO.
-- Algorithmically simple, ideal for introducing the Strategy pattern.
-
----
-
-###### HIFO — Highest In, First Out
-
-- Shares purchased at the **highest price** are sold first.
-- Uses a non-temporal selection criterion.
-- Commonly used in fiscal analysis and advanced simulations.
-- Provides higher algorithmic and pedagogical value.
+* **LIFO — Last In, First Out**
+    - The most recently acquired shares are sold first.
+    - Clearly illustrates behavioral differences compared to FIFO.
+    - Algorithmically simple, ideal for introducing the Strategy pattern.
+* **HIFO — Highest In, First Out**
+    - Shares purchased at the **highest price** are sold first.
+    - Uses a non-temporal selection criterion.
+    - Commonly used in fiscal analysis and advanced simulations.
+    - Provides higher algorithmic and pedagogical value.
 
 Both strategies must be **fully encapsulated within the domain** and designed to be easily extensible.
 
----
-
-##### Advanced Extra Strategy — Specific Lot Identification (Optional)
+#### Advanced Extra Strategy — Specific Lot Identification (Optional)
 
 As an **advanced optional extension**, students may implement an additional policy.
-
-###### Specific Lot Identification
 
 - Allows selling **explicitly selected lots**.
 - The client specifies exactly which lots and how many shares from each lot should be sold.
 - Common in advanced brokers and markets such as the United States.
 
-###### Consistency Rules
+##### Consistency Rules
 
 - `SPECIFIC_ID` is modeled as an additional **portfolio policy**.
 - If a portfolio is created with this policy:
@@ -161,7 +164,7 @@ As an **advanced optional extension**, students may implement an additional poli
 
 This extension is optional but will be **highly valued** for advanced students.
 
-###### Expected Design (DDD + Strategy Pattern)
+##### Expected Design (DDD + Strategy Pattern)
 
 Lot selection strategies must be modeled using the **Strategy pattern**:
 
@@ -169,19 +172,9 @@ Lot selection strategies must be modeled using the **Strategy pattern**:
 - Concrete implementations for FIFO (existing), LIFO, HIFO, and (optional) SPECIFIC_ID.
 - Strategy selection depends on the **state of the Portfolio**, not on controllers or application services.
 
-### 1.3 Watchlists with Price Alerts. New Use Cases.
+### Exercise 3. Watchlists with Price Alerts. New Use Cases.
 A **Watchlist** contains a set of Tickers and a "Threshold Price" for each. 
 
-## 2. Objective of the Assignment
-
-The goal of this assignment is to **evolve the existing system** to support **new lot selection strategies**, beyond FIFO, while strictly respecting:
-
-- **Domain-Driven Design (DDD)** principles
-- **Hexagonal (Clean) Architecture**
-- strong encapsulation of business rules within the **domain**
-- minimal and controlled impact on infrastructure
-
-This assignment is not about rewriting the system, but about **evolving it correctly**.
 
 ---
 
