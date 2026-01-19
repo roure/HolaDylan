@@ -1,36 +1,5 @@
 # Extending HexaStock. Hexagonal (Clean) Architecture**
 
-## Table of Contents
-
-- [1. Business Context](#1-business-context)
-- [2. Objective of the Assignment](#2-objective-of-the-assignment)
-- [3. Fundamental Design Principle (Key Learning Objective)](#3-fundamental-design-principle-key-learning-objective)
-- [4. Lot Selection Policy (Key Domain Decision)](#4-lot-selection-policy-key-domain-decision)
-- [5. Strategies to Implement](#5-strategies-to-implement)
-    - [5.1 Mandatory New Strategies](#51-mandatory-new-strategies)
-    - [5.2 Advanced Extra — Specific Lot Identification (Optional)](#52-advanced-extra--specific-lot-identification-optional)
-- [6. Expected Design (DDD + Strategy Pattern)](#6-expected-design-ddd--strategy-pattern)
-- [7. Hexagonal Architecture](#7-hexagonal-architecture)
-- [8. Evaluation Criteria](#8-evaluation-criteria)
-- [Pedagogical Closing](#pedagogical-closing)
-- [9. Optional Infrastructure Extension — Multiple Persistence Adapters (MySQL & MongoDB)](#9-optional-infrastructure-extension--multiple-persistence-adapters-mysql--mongodb)
-- [10. Deliverables](#10-deliverables)
-    - [1. Source Code (GitHub Repository)](#1-source-code-github-repository)
-        - [Contribution Requirements](#contribution-requirements)
-    - [2. Video Presentation](#2-video-presentation)
-        - [Mandatory General Requirements](#mandatory-general-requirements)
-        - [Central Requirement: Complete End-to-End Use Case Execution](#central-requirement-complete-end-to-end-use-case-execution)
-        - [Architectural Components to Explain (Mandatory)](#architectural-components-to-explain-mandatory)
-        - [Domain-Driven Design Understanding (Critical Evaluation Point)](#domain-driven-design-understanding-critical-evaluation-point)
-        - [Live Execution Demonstration (Mandatory)](#live-execution-demonstration-mandatory)
-        - [Diagrams (PlantUML)](#diagrams-plantuml)
-        - [Code Demonstration (Mandatory)](#code-demonstration-mandatory)
-        - [Test Execution and Explanation (Mandatory)](#test-execution-and-explanation-mandatory)
-        - [Content to Cover (Beyond the Core Use Case)](#content-to-cover-beyond-the-core-use-case)
-        - [Pedagogical Goal of the Video](#pedagogical-goal-of-the-video)
-        - [Understanding and Ownership (Critical)](#understanding-and-ownership-critical)
-
----
 ## 1. Business Context
 The **HexaStock** platform began as a financial portfolio management application focused on stock trading in Spain.  
 It allows users to create portfolios, buy and sell stocks, and track their investments over time. Luckily, the system is very successful
