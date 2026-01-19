@@ -172,13 +172,60 @@ Lot selection strategies must be modeled using the **Strategy pattern**:
 - Concrete implementations for FIFO (existing), LIFO, HIFO, and (optional) SPECIFIC_ID.
 - Strategy selection depends on the **state of the Portfolio**, not on controllers or application services.
 
-### Exercise 3. Watchlists with Price Alerts. New Use Cases.
-A **Watchlist** contains a set of Tickers and a "Threshold Price" for each. 
+## Exercise 3. Automated Market Monitoring & Watchlists
+
+Your current system allows for manual trading of stocks. However, sophisticated investors rarely sit in front of a screen waiting for a specific price. They use **Watchlists** with automated triggers.
+
+In this assignment, you will extend your existing stock market application to support user-defined Watchlists that automatically identify buying opportunities based on real-time market data.
+
+### 3.1 Watchlist Management
+
+Each **User** in the system can now own multiple **Watchlists** (e.g., "Tech Growth," "Energy Dividends").
+
+* A Watchlist is a collection of **Entries**.
+* Each Entry consists of a **Stock Ticker** (e.g., "AAPL") and a **Threshold Price**.
+* A Ticker can appear in multiple watchlists across the same or different users.
+
+**New Feature:** Implement a way for users to create a new Watchlist with stock tickers and their respective threshold prices.
+**Users:** Note that we do not need a representation of the user in the system. A _Watchlist_ can represent its user owner as a String (ownerName).
+
+### 3.2 The "Market Sentinel" (Daemon Process)
+
+You must implement a background process (a "Daemon") that monitors the market.
+
+* **Frequency:** The process must run periodically. The interval (minutes or hours) must be configurable via your application's configuration files (e.g., `application.properties`).
+* **Logic:** For every ticker present in any active Watchlist, the process must fetch the current market price using the existing external API adapters.
+* **Trigger:** If the **current price** is less than or equal to the **threshold price** defined in a Watchlist, the system should log a "Buy Signal" to the console (simulating a notification):
+> `[BUY SIGNAL] User: {onerName} | List: {listName} | Ticker: {symbol} | Target price: {target price} | Current price: {current price}`
+
+### 3.3 Technical Constraints
+
+#### Persistence & Mapping
+
+You must store these new entities in the database using JPA.
+
+* **The Challenge:** Ensure that your business logic (Domain) remains entirely decoupled from your database logic (Persistence).
+* **Requirement:** Your Domain objects must not contain JPA annotations (like `@Entity` or `@Table`). You must implement mappers to convert between the Database Entities and the Domain Objects within your persistence adapter.
+
+#### The Daemon Process (Spring)
+
+To implement the background process in Spring, you should look into the `@Scheduled` annotation.
+
+* Consider whether this daemon acts as a **Driving Actor**.
+* If it is a driving actor, does it need to interact with the core through a specific **Input Port**?
+* Ensure the daemon does not contain business logic; its only job is to trigger the appropriate Use Case at the right time.
+
+### 3.4 Evaluation Criteria
+
+| Criteria | Expectation |
+| --- | --- |
+| **Hexagonal Integrity** | No "leakage" of JPA or Web dependencies into the Domain layer. |
+| **Granularity** | Proper separation between the `Watchlist` aggregate and the `Portfolio` aggregate. |
+| **Configuration** | The background task interval is properly read from environmental properties. |
+| **Relational Mapping** | Correct handling of the Many-to-Many relationship between Watchlists and Tickers in the persistence adapter. |
 
 
----
-
-## 3. Fundamental Design Principle (Key Learning Objective)
+## 4. Fundamental Design Principle (Key Learning Objective)
 
 This assignment is intentionally designed as a deep learning opportunity about software design and architecture.
 
@@ -193,8 +240,6 @@ Therefore, the main impact of this extension must be concentrated in the **domai
 
 This exercise aims to demonstrate, in a concrete and practical way, the power of combining **DDD with Hexagonal Architecture** to reduce the cost of change and protect the core of the system.
 
----
-
 
 ### Explicitly forbidden
 
@@ -202,9 +247,7 @@ This exercise aims to demonstrate, in a concrete and practical way, the power of
 - Algorithm selection in the web layer
 - Leakage of domain rules into infrastructure code
 
----
-
-## 7. Hexagonal Architecture
+## 5. Hexagonal Architecture
 
 The extension must respect the existing architecture:
 
@@ -220,9 +263,7 @@ The extension must respect the existing architecture:
 - **Outbound adapters (persistence)**  
   Persist the policy, no business logic.
 
----
-
-## 8. Evaluation Criteria
+## 6. Evaluation Criteria
 
 The following aspects will be especially valued:
 
@@ -233,145 +274,13 @@ The following aspects will be especially valued:
 - Clear and expressive domain tests
 - *(Extra)* Correct implementation of Specific Lot Identification
 
----
-
 ## Pedagogical Closing
 
 > *This assignment is not about adding features, but about demonstrating how a well-designed system can evolve with new business rules without compromising its architecture.*
 
----
+## 7. Deliverables
 
-## 9. Optional Infrastructure Extension — Multiple Persistence Adapters (MySQL & MongoDB)
-
-### Context
-
-The current HexaStock system uses a **relational database (MySQL)** via JPA as its persistence mechanism.  
-This persistence layer is already implemented following **hexagonal architecture principles**: the domain defines outbound ports (repository interfaces), and the infrastructure provides concrete adapters that implement those ports using JPA.
-
-This design decision has successfully isolated the domain from persistence concerns.
-
----
-
-### Optional Advanced Requirement
-
-As an **optional and advanced extension**, students may extend the system to support **MongoDB** as an alternative persistence mechanism, in addition to the existing MySQL/JPA implementation.
-
-The choice of persistence technology must be controlled using **Spring Profiles**:
-
-- **Profile `jpa`**: activates the MySQL/JPA adapter
-- **Profile `mongodb`**: activates the MongoDB adapter
-
-Switching between MySQL and MongoDB must be possible **without changing domain code**, simply by activating a different Spring profile in the application configuration.
-
-Both adapters must coexist in the codebase, and the application must work correctly with either technology depending on the active profile.
-
----
-
-### Architectural Constraints (Very Important)
-
-This extension is **optional** and intended for **advanced students** who wish to explore infrastructure flexibility in depth.
-
-If you choose to implement this extension, the following constraints are **mandatory**:
-
-1. **The domain layer must not be modified** to support MongoDB.
-   - No MongoDB-specific annotations, types, or logic in domain classes.
-   - Domain classes remain persistence-agnostic.
-
-2. **All existing domain tests must remain unchanged** and must pass regardless of the active persistence technology.
-   - Domain tests should not know or care whether data is stored in MySQL or MongoDB.
-
-3. **All MongoDB-related code must live exclusively in infrastructure adapters.**
-   - Document models, mappers, and repository implementations belong to the adapter layer.
-
-4. **The existing repository ports must be reused.**
-   - The MongoDB adapter must implement the same outbound port interfaces already used by the JPA adapter.
-   - No new ports should be created for MongoDB.
-
-5. **Profile-based activation must be clean and explicit.**
-   - Each adapter should be activated only when its corresponding profile is active.
-   - Use Spring's `@Profile` annotation or equivalent mechanisms.
-
----
-
-### Explicit Pedagogical Objective
-
-This optional extension exists to demonstrate a fundamental architectural principle:
-
-> **Changes in infrastructure impact only infrastructure code.**  
-> **A stable and well-designed domain remains unchanged even when the persistence technology changes completely.**
-
-By implementing this extension, you will experience firsthand:
-
-- That **infrastructure is replaceable** without touching business logic.
-- That **ports and adapters** provide genuine protection and flexibility.
-- The practical value of combining **Domain-Driven Design** with **Hexagonal Architecture** in real-world scenarios.
-
-This is the counterpart to the mandatory assignment:  
-- The **mandatory work** (lot selection strategies) demonstrates how **business changes** are isolated in the domain.
-- This **optional extension** demonstrates how **infrastructure changes** are isolated in adapters.
-
-Together, they illustrate the complete architectural story.
-
----
-
-### Implementation Hints (High-Level)
-
-The HexaStock project already demonstrates profile-based adapter selection in another area: **stock price providers** can be switched via Spring profiles. Study that implementation as a reference pattern.
-
-For the MongoDB adapter, consider the following approach:
-
-- Use **Spring Data MongoDB** as the persistence framework.
-- Create separate **MongoDB document models** (e.g., `PortfolioDocument`) in the adapter layer.
-  - These documents may have a different structure optimized for MongoDB (embedded lots, denormalized data, etc.).
-- Implement **dedicated mappers** to translate between domain entities and MongoDB documents.
-- Ensure the MongoDB repository implementation satisfies the same port contract as the JPA adapter.
-- Both JPA and MongoDB adapters should **coexist in the codebase**, activated conditionally via profiles.
-
-You are free to design the MongoDB document structure as you see fit, as long as:
-- It correctly represents the domain state.
-- The adapter correctly translates between documents and domain entities.
-- All domain rules and invariants are preserved.
-
----
-
-### Evaluation Notes
-
-This optional extension will be evaluated **separately** from the mandatory assignment and will **not penalize** students who choose not to implement it.
-
-**If you do not implement this extension**, your grade will be based entirely on the mandatory requirements (lot selection strategies, domain design, and tests).
-
-**If you do implement this extension**, it will be assessed based on:
-
-- **Clean separation** between domain and infrastructure (domain remains unchanged).
-- **Correct use of Spring profiles** to switch between adapters.
-- **Absence of persistence-specific code in the domain** (no JPA or MongoDB leaks).
-- **Ability to run the application with either database** by changing configuration only.
-- **Quality of the MongoDB adapter design** (document modeling, mapping, error handling).
-- **All tests passing** regardless of the active persistence technology.
-
-Successful implementation of this extension will demonstrate **advanced understanding** of hexagonal architecture and will be rewarded accordingly.
-
----
-
-### Pedagogical Closing
-
-This optional infrastructure extension reinforces the core learning objective of the assignment:
-
-- The **core assignment** focuses on a **business change**: extending lot selection strategies.  
-  This change is isolated in the **domain layer**.
-
-- This **optional extension** focuses on an **infrastructure change**: replacing the persistence technology.  
-  This change is isolated in the **adapter layer**.
-
-Each type of change is intentionally confined to its proper architectural layer.
-
-By working through both challenges, you will gain deep, practical understanding of how **Domain-Driven Design** and **Hexagonal Architecture** work together to create systems that are resilient to change—whether that change comes from evolving business requirements or from evolving technical infrastructure.
-
----
-
-## 10. Deliverables
-
-### 1. Source Code (GitHub Repository)
+### 7.1. Source Code (GitHub Repository)
 
 Students must submit the source code of their implementation through a **GitHub repository**.
 
@@ -386,15 +295,11 @@ The repository must comply with all technical and organizational instructions pr
 
 The Git history is part of the evaluation and must demonstrate genuine collaborative software development.
 
----
+### 7.2. Video Presentation
 
-### 2. Video Presentation
-
-Students must submit a **video presentation** that explains and demonstrates their solution.
+Students must submit a **video presentation** for each exercise (a total of three videos) that explains and demonstrates their solution.
 
 The delivery format (platform, upload method, etc.) will be specified by the instructors in the virtual campus.
-
----
 
 #### Mandatory General Requirements
 
@@ -403,8 +308,6 @@ The video must comply with the following requirements:
 - **Language**: The video must be recorded in **English**.
 - **Team participation**: The video must include **all group members**, actively participating in the explanation.
 - **Visual support**: Use **diagrams** as visual support throughout the presentation.
-
----
 
 #### Central Requirement: Complete End-to-End Use Case Execution
 
@@ -415,8 +318,6 @@ The **core focus** of the video must be to explain and demonstrate **the complet
 Students must demonstrate **deep architectural understanding** by explaining the full execution path, from the incoming HTTP request, through all hexagonal layers, until data is persisted and retrieved, and back to the HTTP response.
 
 This is **not a high-level overview**. Students must walk through the actual implementation, step by step, showing how each architectural component participates in the use case.
-
----
 
 #### Architectural Components to Explain (Mandatory)
 
@@ -467,8 +368,6 @@ The video must explain **all architectural components involved in the use case**
    - Show how the domain result is mapped back to DTOs
    - Explain how the HTTP response is constructed
 
----
-
 #### Domain-Driven Design Understanding (Critical Evaluation Point)
 
 The video must **explicitly and clearly demonstrate** understanding of Domain-Driven Design principles:
@@ -490,8 +389,6 @@ The video must **explicitly and clearly demonstrate** understanding of Domain-Dr
    - The Portfolio entity must use the strategy to make business decisions
 
 **Failure to demonstrate this understanding will significantly impact the evaluation**, even if the code works correctly.
-
----
 
 #### Live Execution Demonstration (Mandatory)
 
@@ -517,9 +414,6 @@ Required demonstrations:
    - Illustrate how the Portfolio entity uses the HIFO strategy to select lots
 
 This live demonstration will provide **concrete evidence** of architectural understanding and correct implementation.
-
----
-
 #### Diagrams (PlantUML)
 
 The video may include and explain **architectural and design diagrams**, created using **PlantUML**.
@@ -545,8 +439,6 @@ The video may include and explain **architectural and design diagrams**, created
 - Students must explain each component and interaction shown in the diagrams
 - Diagrams must be **consistent** with the actual code shown
 
----
-
 #### Code Demonstration (Mandatory)
 
 The video must show **relevant source code** directly in **IntelliJ IDEA**.
@@ -568,8 +460,6 @@ Required code demonstrations:
 3. **Highlight architectural boundaries**:
    - Show how the domain does not depend on infrastructure
    - Show how adapters depend on ports, not the other way around
-
----
 
 #### Test Execution and Explanation (Mandatory)
 
@@ -595,8 +485,6 @@ Required test demonstrations:
    - If any existing tests needed to be modified, explain why
    - Justify the changes based on the architectural evolution
 
----
-
 #### Content to Cover (Beyond the Core Use Case)
 
 In addition to the core end-to-end execution demonstration, the video should briefly cover:
@@ -606,7 +494,7 @@ In addition to the core end-to-end execution demonstration, the video should bri
    - Describe the solution approach
 
 2. **Architectural Decisions and Trade-offs**
-   - Explain key design decisions (e.g., why Strategy pattern, where to place the strategy)
+   - Explain key design decisions (e.g., why the Strategy pattern, where to place the strategy)
    - Discuss trade-offs and alternative approaches considered
 
 3. **Testing Strategy**
@@ -615,8 +503,6 @@ In addition to the core end-to-end execution demonstration, the video should bri
 
 4. **Optional Extensions (if implemented)**
    - If Specific Lot Identification or MongoDB extension were implemented, provide a brief demonstration
-
----
 
 #### Pedagogical Goal of the Video
 
@@ -629,8 +515,6 @@ The video must demonstrate that students have achieved the **core learning objec
 - **Ability to articulate** how the application service orchestrates while the domain encapsulates business logic
 
 The objective is **not merely to show that the system works**, but to **prove that the system has been correctly designed and correctly extended** according to DDD and Hexagonal Architecture principles.
-
----
 
 #### Understanding and Ownership (Critical)
 
@@ -648,3 +532,121 @@ The video should reflect **genuine mastery** of:
 - The flow of control through the system
 
 Students should be able to answer the question: **"Why did you design it this way?"** for every architectural decision shown.
+
+
+## 8. Optional Infrastructure Extension — Multiple Persistence Adapters (MySQL & MongoDB)
+
+### Context
+
+The current HexaStock system uses a **relational database (MySQL)** via JPA as its persistence mechanism.  
+This persistence layer is already implemented following **hexagonal architecture principles**: the domain defines outbound ports (repository interfaces), and the infrastructure provides concrete adapters that implement those ports using JPA.
+
+This design decision has successfully isolated the domain from persistence concerns.
+
+
+### Optional Advanced Requirement
+
+As an **optional and advanced extension**, students may extend the system to support **MongoDB** as an alternative persistence mechanism, in addition to the existing MySQL/JPA implementation.
+
+The choice of persistence technology must be controlled using **Spring Profiles**:
+
+- **Profile `jpa`**: activates the MySQL/JPA adapter
+- **Profile `mongodb`**: activates the MongoDB adapter
+
+Switching between MySQL and MongoDB must be possible **without changing domain code**, simply by activating a different Spring profile in the application configuration.
+
+Both adapters must coexist in the codebase, and the application must work correctly with either technology depending on the active profile.
+
+### Architectural Constraints (Very Important)
+
+This extension is **optional** and intended for **advanced students** who wish to explore infrastructure flexibility in depth.
+
+If you choose to implement this extension, the following constraints are **mandatory**:
+
+1. **The domain layer must not be modified** to support MongoDB.
+   - No MongoDB-specific annotations, types, or logic in domain classes.
+   - Domain classes remain persistence-agnostic.
+
+2. **All existing domain tests must remain unchanged** and must pass regardless of the active persistence technology.
+   - Domain tests should not know or care whether data is stored in MySQL or MongoDB.
+
+3. **All MongoDB-related code must live exclusively in infrastructure adapters.**
+   - Document models, mappers, and repository implementations belong to the adapter layer.
+
+4. **The existing repository ports must be reused.**
+   - The MongoDB adapter must implement the same outbound port interfaces already used by the JPA adapter.
+   - No new ports should be created for MongoDB.
+
+5. **Profile-based activation must be clean and explicit.**
+   - Each adapter should be activated only when its corresponding profile is active.
+   - Use Spring's `@Profile` annotation or equivalent mechanisms.
+
+### Explicit Pedagogical Objective
+
+This optional extension exists to demonstrate a fundamental architectural principle:
+
+> **Changes in infrastructure impact only infrastructure code.**  
+> **A stable and well-designed domain remains unchanged even when the persistence technology changes completely.**
+
+By implementing this extension, you will experience firsthand:
+
+- That **infrastructure is replaceable** without touching business logic.
+- That **ports and adapters** provide genuine protection and flexibility.
+- The practical value of combining **Domain-Driven Design** with **Hexagonal Architecture** in real-world scenarios.
+
+This is the counterpart to the mandatory assignment:  
+- The **mandatory work** (lot selection strategies) demonstrates how **business changes** are isolated in the domain.
+- This **optional extension** demonstrates how **infrastructure changes** are isolated in adapters.
+
+Together, they illustrate the complete architectural story.
+
+### Implementation Hints (High-Level)
+
+The HexaStock project already demonstrates profile-based adapter selection in another area: **stock price providers** can be switched via Spring profiles. Study that implementation as a reference pattern.
+
+For the MongoDB adapter, consider the following approach:
+
+- Use **Spring Data MongoDB** as the persistence framework.
+- Create separate **MongoDB document models** (e.g., `PortfolioDocument`) in the adapter layer.
+  - These documents may have a different structure optimized for MongoDB (embedded lots, denormalized data, etc.).
+- Implement **dedicated mappers** to translate between domain entities and MongoDB documents.
+- Ensure the MongoDB repository implementation satisfies the same port contract as the JPA adapter.
+- Both JPA and MongoDB adapters should **coexist in the codebase**, activated conditionally via profiles.
+
+You are free to design the MongoDB document structure as you see fit, as long as:
+- It correctly represents the domain state.
+- The adapter correctly translates between documents and domain entities.
+- All domain rules and invariants are preserved.
+
+### Evaluation Notes
+
+This optional extension will be evaluated **separately** from the mandatory assignment and will **not penalize** students who choose not to implement it.
+
+**If you do not implement this extension**, your grade will be based entirely on the mandatory requirements (lot selection strategies, domain design, and tests).
+
+**If you do implement this extension**, it will be assessed based on:
+
+- **Clean separation** between domain and infrastructure (domain remains unchanged).
+- **Correct use of Spring profiles** to switch between adapters.
+- **Absence of persistence-specific code in the domain** (no JPA or MongoDB leaks).
+- **Ability to run the application with either database** by changing configuration only.
+- **Quality of the MongoDB adapter design** (document modeling, mapping, error handling).
+- **All tests passing** regardless of the active persistence technology.
+
+Successful implementation of this extension will demonstrate **advanced understanding** of hexagonal architecture and will be rewarded accordingly.
+
+### Pedagogical Closing
+
+This optional infrastructure extension reinforces the core learning objective of the assignment:
+
+- The **core assignment** focuses on a **business change**: extending lot selection strategies.  
+  This change is isolated in the **domain layer**.
+
+- This **optional extension** focuses on an **infrastructure change**: replacing the persistence technology.  
+  This change is isolated in the **adapter layer**.
+
+Each type of change is intentionally confined to its proper architectural layer.
+
+By working through both challenges, you will gain deep, practical understanding of how **Domain-Driven Design** and **Hexagonal Architecture** work together to create systems that are resilient to change—whether that change comes from evolving business requirements or from evolving technical infrastructure.
+
+
